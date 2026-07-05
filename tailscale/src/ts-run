@@ -1,0 +1,78 @@
+#!/bin/sh
+# ts-run <data-dir> <authkey>: starts tailscaled in the background against <data-dir> (state file
+# and control socket), waits for the socket to appear, then runs `tailscale up` once to join the
+# tailnet, then waits on tailscaled so start-stop-daemon (which backgrounds and pidfiles __EXEC__
+# itself, see adapters/snapmaker-u1/jinni/service.sh) tracks the real backend process.
+#
+# Unlike zerotier-one (a single binary that dispatches on argv/flags and can be exec'd directly in
+# zt-run's place), Tailscale ships two real binaries: tailscaled (the long-running backend) and
+# tailscale (a one-shot CLI that must run AFTER tailscaled is already listening on its socket).
+# There is no join-by-marker-file shortcut here (confirmed against the real tailscaled/tailscale
+# source, cmd/tailscaled/tailscaled.go and cmd/tailscale/cli/up.go: authentication is always a
+# `tailscale up --auth-key=...` call against a running daemon, never a file tailscaled itself
+# reads at startup). So this wrapper backgrounds tailscaled, runs the join, then waits on it,
+# forwarding stop signals so both start and stop track the real backend: the same intent as
+# Tailscale's own official container wrapper (containerboot), which does the same start-then-join
+# sequence in Go instead of shell.
+#
+# Calling `tailscale up` again with the same auth key on every service start is intentional, not a
+# workaround: Tailscale's own containerboot defaults to re-running `up` on every start (its
+# TS_AUTH_ONCE env var defaults to false, "forcibly log in every time"), so this mirrors documented
+# upstream behavior rather than inventing an idempotency assumption.
+set -e
+
+DATA_DIR="$1"
+AUTHKEY="$2"
+BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+STATE_FILE="$DATA_DIR/tailscaled.state"
+SOCKET_FILE="$DATA_DIR/tailscaled.sock"
+
+# A real Tailscale auth key always starts with "tskey-auth-" (confirmed against the actual
+# tailscale/tailscale source, cmd/tailscale/cli/tailnet-lock.go), and, wrapped or plain, never
+# contains whitespace; reject both a wrong prefix and stray whitespace (a plausible copy-paste
+# artifact from a config field) before the value ever reaches tailscaled or the network.
+case "$AUTHKEY" in
+  *[[:space:]]*) echo "ts-run: TS_AUTHKEY must not contain whitespace" >&2; exit 1 ;;
+  tskey-auth-*) ;;
+  *) echo "ts-run: TS_AUTHKEY must start with tskey-auth-, got: $AUTHKEY" >&2; exit 1 ;;
+esac
+
+mkdir -p "$DATA_DIR"
+# A stale socket left by a previous crashed tailscaled would otherwise make the readiness wait
+# below pass immediately against a dead socket, before the new tailscaled has created its own.
+rm -f "$SOCKET_FILE"
+
+"$BIN_DIR/tailscaled" --state="$STATE_FILE" --socket="$SOCKET_FILE" --tun=tailscale0 &
+TAILSCALED_PID=$!
+
+# Registered on BOTH EXIT and TERM/INT so teardown is unconditional. EXIT alone would miss a
+# deliberate stop signal (the shell resumes rather than exiting if a signal trap does not itself
+# call exit); TERM/INT alone would miss `set -e` aborting the script when `tailscale up` or the
+# readiness wait below fails, which would otherwise leave tailscaled backgrounded with nothing left
+# to track or clean it up. Tears down the same way tailscaled's own systemd unit does
+# (ExecStopPost=tailscaled --cleanup, confirmed from the real unit file shipped in the upstream
+# release tarball): without it, a stopped service can leave stale netfilter rules or routes behind,
+# unlike zerotier-one which needs no such step.
+cleanup() {
+  kill "$TAILSCALED_PID" 2>/dev/null || true
+  wait "$TAILSCALED_PID" 2>/dev/null || true
+  "$BIN_DIR/tailscaled" --cleanup 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'cleanup; exit 0' TERM INT
+
+tries=0
+while [ ! -e "$SOCKET_FILE" ]; do
+  tries=$((tries + 1))
+  if [ "$tries" -ge 30 ]; then
+    echo "ts-run: tailscaled socket never appeared at $SOCKET_FILE" >&2
+    exit 1
+  fi
+  sleep 1
+done
+
+# --timeout bounds the join attempt (a real tailscale up flag, cmd/tailscale/cli/up.go) so an
+# unreachable control server fails the service start instead of hanging it indefinitely.
+"$BIN_DIR/tailscale" --socket="$SOCKET_FILE" up --auth-key="$AUTHKEY" --accept-dns=false --hostname=bespok3d-printer --timeout=15s
+
+wait "$TAILSCALED_PID"

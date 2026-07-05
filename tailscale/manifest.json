@@ -1,0 +1,103 @@
+{
+  "name": "tailscale",
+  "title": "Tailscale",
+  "version": "0.1.0",
+  "description": "Joins the printer to your Tailscale mesh network (tailnet), so you can reach Fluidd/Mainsail, the camera, and SSH from anywhere without opening a port on your router. Bring your own account: generate an auth key at login.tailscale.com/admin/settings/keys, then paste it below. The printer authorizes itself the way any Tailscale device does; it appears in your tailnet's device list like a laptop or phone. Bespok3d hosts no coordination service and never sees your auth key or traffic. Runs tailscaled as a managed service on top of the tun-module base (a real /dev/net/tun the tailscale0 network interface needs).",
+  "tagline": "Reach your printer from anywhere over your Tailscale network.",
+  "category": "system",
+  "channel": "experiment",
+  "printer_specific": false,
+  "changelog": "doc/CHANGELOG.md",
+  "published_at": "2026-07-05",
+  "updated_at": "2026-07-05",
+  "source": "https://github.com/bespok3d-org/plugin-networking",
+  "publisher": "PLACEHOLDER",
+  "provides": [
+    {
+      "service": "tailscale"
+    }
+  ],
+  "require": [
+    {
+      "service": "tun",
+      "cardinality": "one"
+    }
+  ],
+  "conflicts": [],
+  "requires": {
+    "capabilities": [
+      "klipper-generic"
+    ],
+    "variables": [
+      {
+        "name": "TS_AUTHKEY",
+        "description": "An auth key from your tailnet's admin console (login.tailscale.com/admin/settings/keys), starting with tskey-auth-.",
+        "required": true
+      }
+    ]
+  },
+  "permissions": [
+    "system-bin",
+    "managed-service"
+  ],
+  "config": [
+    {
+      "key": "TS_AUTHKEY",
+      "label": "Tailscale auth key",
+      "type": "text",
+      "placeholder": "tskey-auth-...",
+      "hint": "From your tailnet's admin console (login.tailscale.com/admin/settings/keys). Bring your own account; Bespok3d hosts nothing. A reusable key lets you reinstall without generating a new one each time.",
+      "required": true,
+      "scope": "global",
+      "userEditable": true
+    }
+  ],
+  "install": {
+    "data": [
+      "tailscale"
+    ],
+    "place": [
+      {
+        "class": "system-bin",
+        "name": "tailscaled",
+        "variants": [
+          {
+            "when": {
+              "arch": "aarch64"
+            },
+            "src": "files/bin/tailscaled-aarch64"
+          }
+        ]
+      },
+      {
+        "class": "system-bin",
+        "name": "tailscale",
+        "variants": [
+          {
+            "when": {
+              "arch": "aarch64"
+            },
+            "src": "files/bin/tailscale-aarch64"
+          }
+        ]
+      },
+      {
+        "class": "system-bin",
+        "src": "files/bin/ts-run"
+      }
+    ],
+    "service": [
+      {
+        "name": "tailscale",
+        "command": "$BESPOK3D/bin/ts-run",
+        "args": [
+          "$BESPOK3D/var/lib/tailscale",
+          "$TS_AUTHKEY"
+        ],
+        "autostart": true
+      }
+    ]
+  },
+  "conflict_resolutions": [],
+  "files": []
+}

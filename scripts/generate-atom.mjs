@@ -1,11 +1,10 @@
-// Emit this plugin's index atom (one catalog entry) for the federated registry. Reuses the exact
-// entry shape from the monorepo's generate-index.mjs (vendored here; tooling consolidation is
-// deferred). The atom additionally carries the raw `require` so main-index's assembler can resolve
-// cross-plugin `deps` across all atoms. download_url/doc_url are absolute (this is a published list,
-// not the bundled one): download_url is the GitHub release asset API URL, injected by CI.
+// Emit one plugin's index atom (a single catalog entry) for the federated registry. Same entry
+// shape the monorepo's generate-index.mjs produces, plus the raw `require` so a list assembler can
+// resolve cross-plugin `deps`. download_url/doc_url are absolute (this is a published list): the
+// download_url is the GitHub release asset API URL, injected by CI.
 //
-// Usage: node scripts/generate-atom.mjs [--download-url <url>] [--repo owner/repo] [--doc-url <url>]
-// Writes dist/<name>.atom.json. Without --download-url it falls back to the local .b3 filename
+// Usage: node scripts/generate-atom.mjs --plugin <plugin-id> [--download-url <url>] [--repo owner/repo]
+// Writes dist/<plugin-id>.atom.json. Without --download-url it falls back to the local .b3 filename
 // (a dry-run inspectable atom, not for publishing).
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
@@ -57,10 +56,12 @@ function arg(flag, fallback) {
 async function main() {
   const scriptDir = dirname(fileURLToPath(import.meta.url))
   const repoDir = dirname(scriptDir)
-  const manifest = JSON.parse(await readFile(join(repoDir, 'plugin', 'manifest.json'), 'utf8'))
+  const pluginId = arg('--plugin', undefined)
+  if (!pluginId) throw new Error('missing required --plugin <plugin-id>')
+  const manifest = JSON.parse(await readFile(join(repoDir, pluginId, 'manifest.json'), 'utf8'))
   const repo = arg('--repo', 'Bespok3d/networking')
   const downloadUrl = arg('--download-url', `${manifest.name}-${manifest.version}.b3`)
-  const docUrl = arg('--doc-url', `https://github.com/${repo}/blob/main/plugin/doc/README.md`)
+  const docUrl = arg('--doc-url', `https://github.com/${repo}/blob/main/${pluginId}/doc/README.md`)
   const atom = buildAtom(manifest, downloadUrl, docUrl)
   const outDir = join(repoDir, 'dist')
   await mkdir(outDir, { recursive: true })

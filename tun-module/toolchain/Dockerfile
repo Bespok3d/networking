@@ -29,11 +29,17 @@ ENV PATH=/opt/toolchain/bin:$PATH
 ENV ARCH=arm64
 ENV CROSS_COMPILE=aarch64-none-linux-gnu-
 
-# The RK BSP kernel source at the EXACT 6.1.99 commit (develop-6.1 @ cac15753b8ce, "Linux 6.1.99",
-# 2024-07-15), so the module's struct layouts match junior's kernel with no MODVERSIONS CRC net. A
-# shallow single-commit fetch, not a full clone; .git is dropped so setlocalversion adds no -g<sha>
-# suffix (junior's UTS_RELEASE is plain 6.1.99 despite LOCALVERSION_AUTO=y).
-ARG KERNEL_REF=cac15753b8ceb505a3c646f83a86dccbab9e33a3
+# The RK BSP kernel source at the commit Snapmaker ACTUALLY ships (develop-6.1 @ 8533b2249e15, a
+# Jan-2025 develop-6.1 commit), taken from the community Extended Firmware's vars.mk (it runs
+# Tailscale over kernel tun on this exact hardware). NOT the commit literally tagged "Linux 6.1.99"
+# (cac15753, Jul-2024): the develop-6.1 branch never bumps the sublevel, so both report vermagic
+# 6.1.99 and both load, but six months of BSP commits apart means their net-stack structs differ, and
+# with MODVERSIONS off there is no symbol-CRC to catch it. The tagged commit's tun.ko loads then fails
+# register_netdevice (ethtool_check_ops WARN) at TUNSETIFF; 8533b224 was proven end-to-end on junior
+# (ip tuntap add succeeds, tailscaled brings up a live tailscale0). A shallow single-commit fetch, not
+# a full clone; .git is dropped so setlocalversion adds no -g<sha> suffix (junior's UTS_RELEASE is
+# plain 6.1.99 despite LOCALVERSION_AUTO=y).
+ARG KERNEL_REF=8533b2249e1550b233a4836d039d64e3bb2fed7a
 RUN git init /kernel \
     && cd /kernel \
     && git remote add origin https://github.com/rockchip-linux/kernel.git \

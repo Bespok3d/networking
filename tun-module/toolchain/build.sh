@@ -1,8 +1,10 @@
 #!/bin/sh
 # Cross-build tun.ko for the U1 kernel (Linux 6.1.99 aarch64) into dist/tun.ko, then verify its
 # vermagic. Modeled on plugins/u1-hw-camera/toolchain/build.sh. The vermagic check is necessary,
-# NOT sufficient (MODVERSIONS is off, so there is no CRC safety net): the real gate is an on-device
-# insmod on junior plus exercising /dev/net/tun, per the recon. See doc/recon-kernel-vpn.md.
+# NOT sufficient (MODVERSIONS is off, so there is no CRC safety net), and neither is a successful
+# insmod: the wrong-commit .ko (packet 4's first build) matched vermagic AND insmod'd cleanly and was
+# still broken (TUNSETIFF EINVAL). The real gate is creating an interface on junior (`ip tuntap add`,
+# or a VPN plugin whose interface comes UP), per the recon. See doc/recon-kernel-vpn.md.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

@@ -82,6 +82,18 @@ it exactly to minimize any risk.
   gate the plan already specifies: attempt `insmod` on junior and classify the actual result, plus
   exercise the device (open `/dev/net/tun`, bring up an interface) before trusting it. This is normal
   device-verify, NOT a blocker.
+  - **UPDATE 2026-07-05 (this exact caveat MATERIALIZED, then was resolved).** Packet 4's first
+    `tun.ko` was cross-built from the wrong `rockchip-linux/kernel` commit (`cac15753`, the commit
+    literally tagged "Linux 6.1.99") instead of the one Snapmaker actually ships (`8533b224`, a
+    develop-6.1 commit six months later). Same vermagic, different net-stack structs, MODVERSIONS off:
+    the module `insmod`'d cleanly and `lsmod` listed it, but `TUNSETIFF` failed EINVAL
+    (`register_netdevice` -> `ethtool_check_ops` WARN). This is why "attempt `insmod` and classify"
+    is not enough on its own: `insmod` SUCCEEDED. Only "bring up an interface" (`ip tuntap add`)
+    caught it. Rebuilding from `8533b224` fixed it, device-verified end-to-end on junior 2026-07-05
+    (`ip tuntap add` succeeds, real `tailscale0` and a `zt*` interface both come UP). The correct
+    commit was found in the community Extended Firmware's `vars.mk`
+    (`external sources/SnapmakerU1-Extended-Firmware`), which runs Tailscale over kernel tun on this
+    exact board.
 - De-risk option if the first source point does not load cleanly: build the `.ko` against a couple of
   candidate source points (nearest RK BSP commit variants) and try each on junior; the one that
   `insmod`s and exercises cleanly wins. This is the same variant-selection mechanism the relay is

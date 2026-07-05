@@ -1,16 +1,21 @@
 name: build-and-release
 
-# On a push to main that changes the plugin, its toolchain, or the build scripts: cross-build
-# tun.ko, pack the .b3, publish a GitHub release, and write the index atom into Bespok3d/main-index
-# so the published catalog picks the plugin up. Modeled on plugins/u1-hw-camera's release.yml; the
-# .ko build is a native linux/amd64 Docker build (the ARM cross-toolchain targets aarch64 from the
-# x86 runner), so there is no QEMU step, unlike the camera's arm64-under-QEMU build.
+# On a push to main that changes a plugin or the build scripts: build each plugin's payload (a
+# plugin whose payload is a build output ships a build.sh, e.g. tun-module's Docker cross-build or
+# zerotier's SHA-pinned download), pack every plugin's .b3, publish a GitHub release per plugin,
+# regenerate this repo's sub-list index.json, and register the sub-list in Bespok3d/main-index (a
+# one-time-idempotent lists[] reference) so the official catalog picks these plugins up.
 on:
   push:
     branches: [main]
     paths:
-      - plugin/**
-      - toolchain/**
+      - '*/manifest.json'
+      - '*/files/**'
+      - '*/doc/**'
+      - '*/build.sh'
+      - '*/toolchain/**'
+      - '*/src/**'
+      - '*/tests/**'
       - scripts/**
       - .github/workflows/release.yml
   workflow_dispatch:
@@ -19,76 +24,95 @@ jobs:
   build-and-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # create the release on this repo
+      contents: write   # create releases + commit index.json on this repo
     steps:
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
 
       # Exposes ACTIONS_CACHE_URL + ACTIONS_RUNTIME_TOKEN so buildx can read/write the GitHub
-      # Actions layer cache (the type=gha referenced by B3D_CACHE_ARGS below).
+      # Actions layer cache (only tun-module's Docker cross-build uses this; harmless otherwise).
       - uses: crazy-max/ghaction-github-runtime@v3
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Cross-build tun.ko
-        # First run fills the cache (apt + the ARM toolchain download + the kernel fetch); every run
-        # after restores those layers and only re-links the module.
+      - name: Build each plugin's payload (a plugin that needs one ships build.sh)
         env:
           B3D_CACHE_ARGS: --cache-from type=gha --cache-to type=gha,mode=max
-        run: sh toolchain/build.sh
+        run: 'for dir in */; do [ -f "${dir}build.sh" ] && sh "${dir}build.sh"; done; true'
 
-      - name: Pack the .b3
+      - name: Test each plugin (a plugin with tests ships tests/run.sh)
+        run: 'for dir in */; do [ -f "${dir}tests/run.sh" ] && sh "${dir}tests/run.sh"; done; true'
+
+      - name: Pack every plugin .b3
         run: sh scripts/pack.sh
 
-      - name: Resolve version
-        id: ver
-        run: echo "version=$(jq -r '.version' plugin/manifest.json)" >> "$GITHUB_OUTPUT"
-
-      - name: Publish release + upload .b3
+      - name: Release each plugin and generate its atom
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          TAG="tun-module-v${VERSION}"
-          ASSET="tun-module-${VERSION}.b3"
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --title "$TAG" --notes "Automated release of ${ASSET}"
+          for dir in */; do
+            [ -f "${dir}manifest.json" ] || continue
+            id="${dir%/}"
+            name=$(jq -r '.name' "${dir}manifest.json")
+            version=$(jq -r '.version' "${dir}manifest.json")
+            tag="${name}-v${version}"
+            asset="${name}-${version}.b3"
+            if ! gh release view "$tag" >/dev/null 2>&1; then
+              gh release create "$tag" --title "$tag" --notes "Automated release of ${asset}"
+            fi
+            gh release upload "$tag" "dist/${asset}" --clobber
+            # The asset's API URL (.url, not browser_download_url) is what the app fetches with a
+            # bearer token + Accept: application/octet-stream (works for private repos).
+            download_url=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+              --jq ".assets[] | select(.name==\"${asset}\") | .url")
+            node scripts/generate-atom.mjs --plugin "$id" --download-url "$download_url" --repo "$GITHUB_REPOSITORY"
+          done
+
+      - name: Assemble this repo's sub-list index.json
+        run: node scripts/assemble-list.mjs
+
+      - name: Commit index.json
+        run: |
+          git config user.name "bespok3d-bot"
+          git config user.email "bot@bespok3d.local"
+          git add index.json
+          if git diff --cached --quiet; then
+            echo "index unchanged; nothing to commit"
+          else
+            git commit -m "assemble sub-list index.json"
+            git push
           fi
-          gh release upload "$TAG" "dist/${ASSET}" --clobber
 
-      - name: Generate atom with the release asset URL
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.ver.outputs.version }}
-        run: |
-          TAG="tun-module-v${VERSION}"
-          ASSET="tun-module-${VERSION}.b3"
-          # The asset's API URL (.url, not browser_download_url) is what the app fetches with a
-          # bearer token + Accept: application/octet-stream (works for private repos).
-          DOWNLOAD_URL=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" \
-            --jq ".assets[] | select(.name==\"${ASSET}\") | .url")
-          echo "download_url=${DOWNLOAD_URL}"
-          node scripts/generate-atom.mjs --download-url "$DOWNLOAD_URL" --repo "$GITHUB_REPOSITORY"
-
-      - name: Commit atom into Bespok3d/main-index
+      - name: Register this sub-list in Bespok3d/main-index (idempotent)
         env:
           # Fine-grained PAT with contents:write on Bespok3d/main-index (the per-repo GITHUB_TOKEN
           # cannot write a sibling repo). Create it in the org and add it as this repo's secret.
           MAIN_INDEX_TOKEN: ${{ secrets.MAIN_INDEX_TOKEN }}
         run: |
+          repo_name="${GITHUB_REPOSITORY##*/}"
+          # github: ref (not a raw.githubusercontent URL): the app fetches sub-lists via the
+          # authenticated GitHub API, which works for private repos and public alike. Raw URLs
+          # 404 on private repos (they need an ephemeral per-user token the app cannot store).
+          list_url="github:${GITHUB_REPOSITORY}/index.json"
           git clone "https://x-access-token:${MAIN_INDEX_TOKEN}@github.com/Bespok3d/main-index.git" main-index
-          mkdir -p main-index/atoms
-          cp dist/tun-module.atom.json main-index/atoms/tun-module.atom.json
+          mkdir -p main-index/lists
+          printf '{\n  "name": "Networking",\n  "url": "%s"\n}\n' "$list_url" \
+            > "main-index/lists/${repo_name}.json"
           cd main-index
           git config user.name "bespok3d-bot"
           git config user.email "bot@bespok3d.local"
-          git add atoms/tun-module.atom.json
+          git add "lists/${repo_name}.json"
           if git diff --cached --quiet; then
-            echo "atom unchanged; nothing to commit"
+            echo "list reference unchanged; nothing to commit"
           else
-            git commit -m "tun-module ${{ steps.ver.outputs.version }}: update atom"
-            git push
+            git commit -m "register ${repo_name} sub-list"
+            for attempt in 1 2 3 4 5; do
+              git push && { echo "pushed main-index (attempt ${attempt})"; break; }
+              [ "$attempt" = 5 ] && { echo "main-index push failed after ${attempt} attempts"; exit 1; }
+              echo "main-index push rejected; rebasing on remote main (attempt ${attempt})"
+              git pull --rebase --no-edit origin main
+            done
           fi

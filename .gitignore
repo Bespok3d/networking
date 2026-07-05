@@ -1,7 +1,10 @@
-# Build outputs, never committed (the .ko is baked by toolchain/build.sh, staged into the .b3).
+# Build outputs, never committed. Each plugin lives in its own <plugin-id>/ dir (u1-extras pattern);
+# a build.sh fetches or cross-builds its binary payload fresh, so files/bin and files/modules are
+# always regenerated, never hand-edited.
 dist/
-toolchain/dist/
-plugin/files/modules/
+*/toolchain/dist/
+*/files/modules/
+*/files/bin/
 .DS_Store
 __pycache__/
 *.pyc

@@ -1,0 +1,40 @@
+#!/bin/sh
+# zt-run <home-dir> <network-id>: pre-authorizes membership in <network-id>, the way zerotier-one
+# itself documents (an empty networks.d/<network-id>.conf marker makes it join on startup without
+# needing zerotier-cli; see zerotier-one(8), FILES: networks.d), then execs zerotier-one in the
+# foreground against <home-dir> so start-stop-daemon (which backgrounds and pidfiles __EXEC__
+# itself, see adapters/snapmaker-u1/jinni/service.sh) tracks the real process directly. Never pass
+# -d: that makes zerotier-one daemonize itself, which would hand start-stop-daemon a pid that
+# immediately exits.
+#
+# Changing ZT_NETWORK_ID in the plugin's config and reconfiguring (which restarts this service)
+# should switch networks, not join both. We only ever remove a marker THIS wrapper created (tracked
+# in .bespok3d-network below), never sweep the whole networks.d directory: that directory is
+# zerotier-one's own, and a marker a user joined by hand over SSH (or a future second Bespok3d
+# plugin sharing this data dir) must survive a restart untouched.
+set -e
+
+HOME_DIR="$1"
+NWID="$2"
+BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+STATE_FILE="$HOME_DIR/.bespok3d-network"
+
+# A ZeroTier network id is always exactly 16 hex digits. requires.variables only checks that this
+# is "safe shell text" in general (letters/numbers/some punctuation, including /), so a stray or
+# malicious value could otherwise be spliced into networks.d/<value>.conf as a path: a slash would
+# point at a nonexistent subdirectory and crash-loop this service under set -e. Enforce the real
+# format here, before it ever touches a path.
+case "$NWID" in
+  [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]) ;;
+  *) echo "zt-run: ZT_NETWORK_ID must be exactly 16 hex digits, got: $NWID" >&2; exit 1 ;;
+esac
+
+mkdir -p "$HOME_DIR/networks.d"
+if [ -f "$STATE_FILE" ]; then
+  PREV_NWID="$(cat "$STATE_FILE")"
+  [ "$PREV_NWID" = "$NWID" ] || rm -f "$HOME_DIR/networks.d/$PREV_NWID.conf"
+fi
+: > "$HOME_DIR/networks.d/$NWID.conf"
+echo "$NWID" > "$STATE_FILE"
+
+exec "$BIN_DIR/zerotier-one" "$HOME_DIR"
