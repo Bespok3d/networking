@@ -1,8 +1,8 @@
 #!/bin/sh
 # Regression tests for src/ts-run, run against fake tailscaled/tailscale stubs (no real binaries,
-# no network, no device needed). Exercises the start/wait-for-socket/join/stop sequence that is the
-# whole reason this wrapper exists; the daemon's own install.service/variant-selection mechanism is
-# covered by daemon/tests, not re-tested here.
+# no network, no device needed). Exercises the read-key-from-file + start/wait-for-socket/join/stop
+# sequence that is the whole reason this wrapper exists; the daemon's own install.templates/
+# install.service mechanism is covered by daemon/tests, not re-tested here.
 set -e
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -11,6 +11,9 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 fail() { echo "FAIL: $1" >&2; exit 1; }
+# Stand in for the daemon rendering install.templates: write the auth key into the file ts-run reads,
+# the same way a fresh install or a reconfigure re-render does.
+render_key() { printf '%s\n' "$2" > "$1"; }
 
 # A stub standing in for tailscaled: creates the socket file it was told to listen on, records its
 # own pid, and sleeps until killed, so the test can exercise readiness-wait and stop/cleanup.
@@ -55,20 +58,33 @@ wait_for() {
 
 # 1. A malformed auth key (no tskey-auth- prefix) must be rejected before tailscaled ever starts.
 BAD_HOME="$WORK/home-bad"
-if "$WORK/ts-run" "$BAD_HOME" "not-a-real-key" 2>/dev/null; then
+BAD_KEY="$WORK/key-bad"
+render_key "$BAD_KEY" "not-a-real-key"
+if "$WORK/ts-run" "$BAD_HOME" "$BAD_KEY" 2>/dev/null; then
   fail "ts-run accepted a malformed auth key instead of rejecting it"
 fi
 [ -e "$BAD_HOME" ] && fail "ts-run touched the data dir before validating the auth key"
 
 # 2. An auth key with embedded whitespace (a plausible copy-paste artifact) must be rejected too.
-if "$WORK/ts-run" "$WORK/home-whitespace" "tskey-auth-has space" 2>/dev/null; then
+WS_KEY="$WORK/key-ws"
+render_key "$WS_KEY" "tskey-auth-has space"
+if "$WORK/ts-run" "$WORK/home-whitespace" "$WS_KEY" 2>/dev/null; then
   fail "ts-run accepted an auth key containing whitespace instead of rejecting it"
 fi
 
-# 3. A well-formed key: tailscaled starts, the socket appears, tailscale up is invoked with the
-# right socket and key, then stopping ts-run tears both down.
+# 2b. A missing key file (an unconfigured or half-installed plugin) must fail with a clear error
+# rather than start tailscaled with an empty key.
+if "$WORK/ts-run" "$WORK/home-missing" "$WORK/key-does-not-exist" 2>/dev/null; then
+  fail "ts-run ran instead of failing on a missing auth key file"
+fi
+
+# 3. A well-formed key rendered into its file: tailscaled starts, the socket appears, tailscale up is
+# invoked with the right socket and the key READ FROM THE FILE (the reconfigure-friendly path, not a
+# baked-in argv value), then stopping ts-run tears both down.
 HOME_DIR="$WORK/home1"
-"$WORK/ts-run" "$HOME_DIR" "tskey-auth-testonly-000000000000" &
+KEY_FILE="$WORK/authkey"
+render_key "$KEY_FILE" "tskey-auth-testonly-000000000000"
+"$WORK/ts-run" "$HOME_DIR" "$KEY_FILE" &
 RUN_PID=$!
 
 wait_for "$WORK/tailscale-invoked"
@@ -76,7 +92,7 @@ wait_for "$WORK/tailscale-invoked"
 grep -q -- "--socket=$HOME_DIR/tailscaled.sock" "$WORK/tailscale-invoked" \
   || fail "tailscale up was not called with the expected socket path"
 grep -q -- "--auth-key=tskey-auth-testonly-000000000000" "$WORK/tailscale-invoked" \
-  || fail "tailscale up was not called with the configured auth key"
+  || fail "tailscale up was not called with the key read from its rendered file"
 [ -f "$WORK/tailscaled-pid" ] || fail "tailscaled was never started"
 
 kill -TERM "$RUN_PID"
@@ -85,12 +101,27 @@ wait "$RUN_PID" 2>/dev/null || true
 [ -f "$WORK/cleanup-invoked" ] || fail "tailscaled --cleanup was not invoked on stop"
 [ -e "$HOME_DIR/tailscaled.sock" ] && fail "tailscaled socket was not removed on stop"
 
+# 3b. Changing the key THE WAY A RECONFIGURE DOES: the daemon re-renders the SAME key file with a new
+# value and restarts the service. The next start must join with the NEW key, not the old one. This is
+# the whole point of reading the key from a file instead of a baked-in argv value.
+rm -f "$WORK/tailscale-invoked" "$WORK/cleanup-invoked" "$WORK/tailscaled-pid"
+render_key "$KEY_FILE" "tskey-auth-rotated-111111111111"
+"$WORK/ts-run" "$HOME_DIR" "$KEY_FILE" &
+RUN_PID=$!
+wait_for "$WORK/tailscale-invoked"
+grep -q -- "--auth-key=tskey-auth-rotated-111111111111" "$WORK/tailscale-invoked" \
+  || fail "a re-rendered key file did not take effect on the next start"
+kill -TERM "$RUN_PID"
+wait "$RUN_PID" 2>/dev/null || true
+
 # 4. A rejected join (tailscale up exits nonzero): under `set -e` this must still run cleanup, not
 # leave tailscaled orphaned. This is the failure mode a real expired/revoked auth key produces.
 rm -f "$WORK/tailscale-invoked" "$WORK/cleanup-invoked" "$WORK/tailscaled-pid"
 : > "$WORK/tailscale-should-fail"
 REJECT_HOME="$WORK/home-reject"
-if "$WORK/ts-run" "$REJECT_HOME" "tskey-auth-rejected-000000000000" >/dev/null 2>&1; then
+REJECT_KEY="$WORK/key-reject"
+render_key "$REJECT_KEY" "tskey-auth-rejected-000000000000"
+if "$WORK/ts-run" "$REJECT_HOME" "$REJECT_KEY" >/dev/null 2>&1; then
   fail "ts-run should have exited nonzero when tailscale up was rejected"
 fi
 [ -f "$WORK/cleanup-invoked" ] || fail "a rejected join must still run tailscaled --cleanup"
@@ -102,7 +133,7 @@ rm -f "$WORK/tailscale-should-fail"
 # cleanup, the same as the ZeroTier device-verify's own account of stop() vs a self-exit.
 rm -f "$WORK/tailscale-invoked" "$WORK/cleanup-invoked" "$WORK/tailscaled-pid"
 CRASH_HOME="$WORK/home-crash"
-"$WORK/ts-run" "$CRASH_HOME" "tskey-auth-testonly-000000000000" &
+"$WORK/ts-run" "$CRASH_HOME" "$KEY_FILE" &
 RUN_PID=$!
 wait_for "$WORK/tailscaled-pid"
 kill -KILL "$(cat "$WORK/tailscaled-pid")"

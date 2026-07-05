@@ -1,8 +1,15 @@
 #!/bin/sh
-# ts-run <data-dir> <authkey>: starts tailscaled in the background against <data-dir> (state file
-# and control socket), waits for the socket to appear, then runs `tailscale up` once to join the
-# tailnet, then waits on tailscaled so start-stop-daemon (which backgrounds and pidfiles __EXEC__
-# itself, see adapters/snapmaker-u1/jinni/service.sh) tracks the real backend process.
+# ts-run <data-dir> <authkey-file>: reads the Tailscale auth key from <authkey-file> (a file the
+# daemon renders from TS_AUTHKEY via install.templates, NOT an argv value baked into the init
+# script), starts tailscaled in the background against <data-dir> (state file and control socket),
+# waits for the socket to appear, then runs `tailscale up` once to join the tailnet, then waits on
+# tailscaled so start-stop-daemon (which backgrounds and pidfiles __EXEC__ itself, see
+# adapters/snapmaker-u1/jinni/service.sh) tracks the real backend process.
+#
+# Reading the key from a file (not argv) is what lets a reconfigure change the key: the daemon
+# re-renders the authkey file from the new TS_AUTHKEY and restarts this service, so the next start
+# reads the new value. An argv value would be frozen into the generated init script at install time
+# and a reconfigure could never change it.
 #
 # Unlike zerotier-one (a single binary that dispatches on argv/flags and can be exec'd directly in
 # zt-run's place), Tailscale ships two real binaries: tailscaled (the long-running backend) and
@@ -22,10 +29,18 @@
 set -e
 
 DATA_DIR="$1"
-AUTHKEY="$2"
+AUTHKEY_FILE="$2"
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 STATE_FILE="$DATA_DIR/tailscaled.state"
 SOCKET_FILE="$DATA_DIR/tailscaled.sock"
+
+if [ ! -f "$AUTHKEY_FILE" ]; then
+  echo "ts-run: auth key file not found: $AUTHKEY_FILE (is the plugin configured?)" >&2
+  exit 1
+fi
+# The rendered file holds exactly the auth key; command substitution strips the template's trailing
+# newline, so the value reaches the format check below clean.
+AUTHKEY="$(cat "$AUTHKEY_FILE")"
 
 # A real Tailscale auth key always starts with "tskey-auth-" (confirmed against the actual
 # tailscale/tailscale source, cmd/tailscale/cli/tailnet-lock.go), and, wrapped or plain, never

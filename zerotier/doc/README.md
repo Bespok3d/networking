@@ -28,16 +28,26 @@ traffic.
 
 ## Changing networks
 
-**Known gap, confirmed on real hardware:** editing the network id in the Config tab and applying it
-does NOT currently switch networks. The daemon's reconfigure only re-renders `render: true` template
-placements and restarts services; it does not regenerate an `install.service` entry's `command`/
-`args` from the new value, so the already-installed service keeps execing with the network id that
-was baked in at install time. `zt-run`'s own switch logic (removing only the marker it previously
-created, joining the new one) is correct and unit-tested, but nothing currently re-invokes it with a
-new value after install. To actually change networks today: uninstall the plugin and reinstall it
-with the new `ZT_NETWORK_ID`. This is a daemon-mechanism limitation, not specific to this plugin -
-see the project seed for the wider note (likely affects any plugin whose `install.service` args
-reference a `requires.variables` value).
+Edit the network id in the Config tab and apply it: the plugin switches networks in place, no
+reinstall needed. The daemon re-renders this plugin's `network-id` file from the new `ZT_NETWORK_ID`
+and restarts the service, and `zt-run` reads the id from that file on every start (it is not baked
+into the init script as a fixed argument). On the next start it removes only the join marker it
+previously created and joins the new network, leaving any network you joined by hand over SSH
+untouched.
+
+Remember to authorize the printer in ZeroTier Central for the new network, the same as the first
+join.
+
+## Reaching Moonraker over ZeroTier
+
+ZeroTier's default managed-route pool (in `10.0.0.0/8`, `172.16.0.0/12`, or `192.0.0.0/8`) already
+falls inside Moonraker's stock `trusted_clients` list, so Fluidd/Mainsail load over ZeroTier without
+a login prompt out of the box. If you configure your ZeroTier network with a custom managed range
+OUTSIDE those blocks (for example a CGNAT `100.64.0.0/10` range), Moonraker will ask that range to
+log in. To trust it, add your range to `[authorization] trusted_clients` in `moonraker.conf` (keep
+every existing entry and add yours), or simply log in with a Moonraker user. The Tailscale plugin
+ships a ready-made trusted-range file because its range is a fixed known value; ZeroTier's is set per
+network in your account, so it cannot be shipped ahead of time.
 
 ## Uninstalling
 

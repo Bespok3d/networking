@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.1 (2026-07-05)
+
+You can now change the ZeroTier network from the Config tab without reinstalling. The network id is
+read from a rendered file on every start instead of being fixed at install time, so applying a new
+`ZT_NETWORK_ID` switches networks on the next restart (removing only the join marker this plugin
+created, and leaving any network you joined by hand over SSH alone). Remember to authorize the
+printer for the new network in ZeroTier Central.
+
+Docs: added a note on reaching Moonraker over ZeroTier. The default managed-route pool already falls
+inside Moonraker's stock trusted list, so Fluidd loads without a login prompt out of the box; a
+custom range outside those blocks needs a manual `trusted_clients` addition (documented).
+
+Re-verification of THIS release on junior is pending (AWAITING-LUCIO).
+
 ## 0.1.0 (2026-07-05)
 
 Initial release. `zerotier-one` (upstream 1.16.2, official Debian arm64 package, SHA-pinned) as a

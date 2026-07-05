@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.1 (2026-07-05)
+
+Fluidd and Mainsail now load over the tailnet without a login prompt. The plugin adds Tailscale's
+`100.64.0.0/10` range to Moonraker's trusted list additively (a small include that re-declares
+`[authorization] trusted_clients` with the stock list plus the tailnet range, leaving `cors_domains`
+and everything else untouched); uninstalling removes it and restores the stock list.
+
+You can change the auth key from the Config tab without reinstalling: the new key is read from a
+rendered file on the next start, so applying a new `TS_AUTHKEY` re-joins with it.
+
+Docs: the setup steps now walk a brand-new Tailscale account past the "add a device" onboarding
+screen to the actual keys page, and explain that a reusable key can be shared across several printers.
+
+Kernel `tailscale0` now works end to end on the U1 (the earlier `TUNSETIFF` failure was a
+wrong-commit `tun.ko`, fixed in the `tun-module` base). Re-verification of THIS release on junior is
+pending (AWAITING-LUCIO); it ships in the `experiment` channel.
+
 ## 0.1.0 (2026-07-05)
 
 Initial release. `tailscaled` + `tailscale` (upstream 1.98.8, official static arm64 build,
