@@ -1,0 +1,4 @@
+# Only junior-6.1.99.config is COPYd into the image; keep everything else out of the build context.
+dist/
+lib/
+build.sh

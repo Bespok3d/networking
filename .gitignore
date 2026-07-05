@@ -1,0 +1,7 @@
+# Build outputs, never committed (the .ko is baked by toolchain/build.sh, staged into the .b3).
+dist/
+toolchain/dist/
+plugin/files/modules/
+.DS_Store
+__pycache__/
+*.pyc
