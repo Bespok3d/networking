@@ -29,6 +29,19 @@
     "kernel-module"
   ],
   "config": [],
+  "bake": [
+    {
+      "class": "docker-ko",
+      "dockerfile": "toolchain/Dockerfile",
+      "context": "toolchain",
+      "module": "tun.ko",
+      "kernel": {
+        "release": "6.1.99",
+        "vermagic": "6.1.99 SMP preempt mod_unload aarch64"
+      },
+      "variant_dest": "files/modules/tun-6.1.99.ko"
+    }
+  ],
   "install": {
     "place": [
       {

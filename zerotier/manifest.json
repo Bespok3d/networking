@@ -52,6 +52,32 @@
       "userEditable": true
     }
   ],
+  "bake": [
+    {
+      "class": "download",
+      "fetch": [
+        {
+          "url": "https://download.zerotier.com/RELEASES/1.16.2/dist/debian/bookworm/zerotier-one_1.16.2_arm64.deb",
+          "sha256": "f301d9dac63fad57e8efe90d1221e740ece7e2c70ebda1684915fd7cb00cdc54",
+          "archive": "deb",
+          "members": [
+            {
+              "path": "usr/sbin/zerotier-one",
+              "dest": "files/bin/zerotier-one-aarch64",
+              "mode": "0755"
+            }
+          ]
+        }
+      ],
+      "include": [
+        {
+          "src": "src/zt-run",
+          "dest": "files/bin/zt-run",
+          "mode": "0755"
+        }
+      ]
+    }
+  ],
   "install": {
     "data": [
       "zerotier"
