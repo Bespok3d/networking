@@ -54,6 +54,37 @@
       "userEditable": true
     }
   ],
+  "bake": [
+    {
+      "class": "download",
+      "fetch": [
+        {
+          "url": "https://pkgs.tailscale.com/stable/tailscale_1.98.8_arm64.tgz",
+          "sha256": "53eb3ce89d062fd34e393d24a6c8ec08c769fede8eb77fe9c6e347ad4ae00f84",
+          "archive": "tar.gz",
+          "members": [
+            {
+              "path": "tailscale_1.98.8_arm64/tailscaled",
+              "dest": "files/bin/tailscaled-aarch64",
+              "mode": "0755"
+            },
+            {
+              "path": "tailscale_1.98.8_arm64/tailscale",
+              "dest": "files/bin/tailscale-aarch64",
+              "mode": "0755"
+            }
+          ]
+        }
+      ],
+      "include": [
+        {
+          "src": "src/ts-run",
+          "dest": "files/bin/ts-run",
+          "mode": "0755"
+        }
+      ]
+    }
+  ],
   "install": {
     "data": [
       "tailscale"

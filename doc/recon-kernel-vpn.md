@@ -4,6 +4,12 @@ Read-only recon for the VPN/kernel-module relay
 (`~/.claude/plans/ok-we-have-to-eventual-wren.md`). No device mutation performed. Probes run
 2026-07-04 on junior (root@10.6.9.109, password auth, read-only SSH).
 
+> SUPERSEDED (2026-07-18): the build-machinery inventory below is historical. The per-repo build
+> scripts it catalogs (`build.sh`, `scripts/pack.sh`, `generate-atom.mjs`, `assemble-list.mjs`,
+> `bake-deps.sh`) were removed when the org moved to the shared `Bespok3d/b3-builder` tool; builds now
+> run `npx b3-builder build ... --bake`. This doc is kept as a record of the packet-1 recon, not as
+> current build instructions.
+>
 > NOTE (2026-07-04, Opus recheck): an earlier Sonnet draft of this doc classified the tun path as
 > BLOCKED. That was WRONG. It is corrected below to MODULE-BUILDABLE. The three errors it made are
 > called out inline so the mistake is not repeated: (1) it read `/proc/config.gz` and then claimed we
