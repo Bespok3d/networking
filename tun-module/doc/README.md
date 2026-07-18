@@ -35,7 +35,8 @@ source point and config, so its `vermagic` matches what the running kernel's `in
 Honest limit: the U1 kernel has `CONFIG_MODVERSIONS` off, so there is no per-symbol CRC safety net.
 A `vermagic` string match is necessary but NOT sufficient. The module is trusted only after it
 actually `insmod`s on the device and `/dev/net/tun` is exercised, never from the string alone. The
-build (`toolchain/build.sh`) checks the `vermagic`; the device-verify is the real gate.
+Docker cross-build (the `toolchain/` Dockerfile, run by b3-builder's bake step) checks the
+`vermagic`; the device-verify is the real gate.
 
 ## Per-kernel variants
 

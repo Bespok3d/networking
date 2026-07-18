@@ -13,14 +13,11 @@ The Bespok3d networking co-repo: mesh-VPN plugins and the kernel base they build
 ```text
 networking/
   <plugin-id>/          # one plugin = one dir; its name is the manifest .name
-    manifest.json
-    build.sh            # only if the payload is a build output (cross-build or pinned download)
+    manifest.json       # metadata + any bake directive (download / docker cross-build)
     toolchain/           # tun-module only: the Docker cross-build for tun.ko
     files/               # payload the daemon places on the printer
     doc/README.md        # rendered in-app; not deployed
-  scripts/{pack.sh,generate-atom.mjs,assemble-list.mjs}
   .github/workflows/release.yml
-  index.json            # the published sub-list (committed; referenced by main-index lists[])
   dist/                 # build output (gitignored)
 ```
 
@@ -29,22 +26,27 @@ raw command; the printer-side adapter realizes it. See `Bespok3d/doc/package-for
 
 ## Building
 
-A plugin whose payload is a build output ships its own `build.sh` at its root (the co-repo's CI and
-`scripts/pack.sh` never build anything themselves, they only stage what is already on disk):
+Builds run through the shared `Bespok3d/b3-builder` tool; `--bake` performs each plugin's declared
+bake step (from its manifest) before packing:
 
-- `tun-module/build.sh` runs the Docker cross-build (`tun-module/toolchain/build.sh`) against the
-  U1's exact kernel and stages the resulting `.ko`. The build validates the module's `vermagic`; the
-  real gate is an on-device `insmod` on a printer.
-- `zerotier/build.sh` downloads ZeroTier's official arm64 release (SHA-pinned) and extracts the
-  `zerotier-one` binary; nothing is compiled.
-- `tailscale/build.sh` downloads Tailscale's official static arm64 tarball (SHA-pinned) and
-  extracts the `tailscaled` and `tailscale` binaries; nothing is compiled.
+- `tun-module` cross-builds `tun.ko` in Docker against the U1's exact kernel (the `toolchain/`
+  Dockerfile) and stages the resulting `.ko`. The build validates the module's `vermagic`; the real
+  gate is an on-device `insmod` on a printer.
+- `zerotier` downloads ZeroTier's official arm64 release (SHA-pinned) and extracts the `zerotier-one`
+  binary; nothing is compiled.
+- `tailscale` downloads Tailscale's official static arm64 tarball (SHA-pinned) and extracts the
+  `tailscaled` and `tailscale` binaries; nothing is compiled.
 
-Run a plugin's `build.sh` locally, then `scripts/pack.sh` to produce `dist/<name>-<version>.b3`.
+```sh
+npm install github:Bespok3d/b3-builder
+npx b3-builder build --source ./tun-module --atom-repo Bespok3d/networking --bake
+# -> dist/tun-module-<version>.b3 + dist/tun-module.atom.json
+```
 
 ## Releasing
 
-Bump a plugin's `manifest.json` `version` and push to `main`. CI builds each plugin's payload, packs
-each `.b3`, cuts a release per plugin, regenerates this repo's `index.json` sub-list, and registers
-it in `Bespok3d/main-index`. Secret: `MAIN_INDEX_TOKEN` (contents:write on main-index). Signing
+Bump a plugin's `manifest.json` `version` and push to `main`. CI runs the `Bespok3d/b3-builder`
+Action, which bakes and packs each plugin's `.b3` and cuts a release per plugin; the `register-atoms`
+action from `Bespok3d/main-index` then registers the atoms. This repo contributes atoms only and
+publishes no list of its own. Secret: `MAIN_INDEX_TOKEN` (contents:write on main-index). Signing
 deferred.
