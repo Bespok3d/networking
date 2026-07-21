@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "Bespok3d Networking",
-  "publisher": "PLACEHOLDER",
+  "publisher": "679939555819fb5f6423dc68c4388e76bfa9b4e0",
   "updated": "2026-07-05",
   "plugins": [
     {
@@ -12,7 +12,7 @@
       "tagline": "Reach your printer from anywhere over your Tailscale network.",
       "category": "system",
       "channel": "experiment",
-      "publisher": "PLACEHOLDER",
+      "publisher": "679939555819fb5f6423dc68c4388e76bfa9b4e0",
       "printer_specific": false,
       "published_at": "2026-07-05",
       "updated_at": "2026-07-05",
@@ -39,7 +39,7 @@
       ],
       "changelog_url": "tailscale/doc/CHANGELOG.md",
       "doc_url": "https://github.com/Bespok3d/networking/blob/main/tailscale/doc/README.md",
-      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/481343695",
+      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/484995428",
       "deps": [
         "tun-module"
       ]
@@ -52,7 +52,7 @@
       "tagline": "Adds /dev/net/tun to the printer, the base a mesh VPN builds on.",
       "category": "system",
       "channel": "testing",
-      "publisher": "PLACEHOLDER",
+      "publisher": "679939555819fb5f6423dc68c4388e76bfa9b4e0",
       "printer_specific": true,
       "published_at": "2026-07-05",
       "updated_at": "2026-07-05",
@@ -68,7 +68,7 @@
       "config": [],
       "changelog_url": "tun-module/doc/CHANGELOG.md",
       "doc_url": "https://github.com/Bespok3d/networking/blob/main/tun-module/doc/README.md",
-      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/481343714",
+      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/484995478",
       "deps": []
     },
     {
@@ -79,7 +79,7 @@
       "tagline": "Reach your printer from anywhere over a ZeroTier mesh network.",
       "category": "system",
       "channel": "testing",
-      "publisher": "PLACEHOLDER",
+      "publisher": "679939555819fb5f6423dc68c4388e76bfa9b4e0",
       "printer_specific": false,
       "published_at": "2026-07-05",
       "updated_at": "2026-07-05",
@@ -106,7 +106,7 @@
       ],
       "changelog_url": "zerotier/doc/CHANGELOG.md",
       "doc_url": "https://github.com/Bespok3d/networking/blob/main/zerotier/doc/README.md",
-      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/481343719",
+      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/484995494",
       "deps": [
         "tun-module"
       ]
