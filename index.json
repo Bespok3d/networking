@@ -39,7 +39,7 @@
       ],
       "changelog_url": "tailscale/doc/CHANGELOG.md",
       "doc_url": "https://github.com/Bespok3d/networking/blob/main/tailscale/doc/README.md",
-      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/486313330",
+      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/486462231",
       "deps": [
         "tun-module"
       ]
@@ -68,7 +68,7 @@
       "config": [],
       "changelog_url": "tun-module/doc/CHANGELOG.md",
       "doc_url": "https://github.com/Bespok3d/networking/blob/main/tun-module/doc/README.md",
-      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/486313359",
+      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/486462250",
       "deps": []
     },
     {
@@ -106,7 +106,7 @@
       ],
       "changelog_url": "zerotier/doc/CHANGELOG.md",
       "doc_url": "https://github.com/Bespok3d/networking/blob/main/zerotier/doc/README.md",
-      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/486313381",
+      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/486462284",
       "deps": [
         "tun-module"
       ]
