@@ -16,6 +16,7 @@
       "printer_specific": false,
       "published_at": "2026-07-05",
       "updated_at": "2026-07-05",
+      "author": "bespoked",
       "requires": {
         "capabilities": [
           "klipper-generic"
@@ -37,9 +38,10 @@
           "userEditable": true
         }
       ],
+      "sw_version": "1.98.8",
       "changelog_url": "tailscale/doc/CHANGELOG.md",
       "doc_url": "https://github.com/Bespok3d/networking/blob/main/tailscale/doc/README.md",
-      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/486462231",
+      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/487126971",
       "deps": [
         "tun-module"
       ]
@@ -56,6 +58,7 @@
       "printer_specific": true,
       "published_at": "2026-07-05",
       "updated_at": "2026-07-05",
+      "author": "bespoked",
       "requires": {
         "capabilities": [
           "kernel-modules"
@@ -68,7 +71,7 @@
       "config": [],
       "changelog_url": "tun-module/doc/CHANGELOG.md",
       "doc_url": "https://github.com/Bespok3d/networking/blob/main/tun-module/doc/README.md",
-      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/486462250",
+      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/487126998",
       "deps": []
     },
     {
@@ -83,6 +86,7 @@
       "printer_specific": false,
       "published_at": "2026-07-05",
       "updated_at": "2026-07-05",
+      "author": "bespoked",
       "requires": {
         "capabilities": [
           "klipper-generic"
@@ -104,9 +108,10 @@
           "userEditable": true
         }
       ],
+      "sw_version": "1.16.2",
       "changelog_url": "zerotier/doc/CHANGELOG.md",
       "doc_url": "https://github.com/Bespok3d/networking/blob/main/zerotier/doc/README.md",
-      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/486462284",
+      "download_url": "https://api.github.com/repos/Bespok3d/networking/releases/assets/487127011",
       "deps": [
         "tun-module"
       ]
