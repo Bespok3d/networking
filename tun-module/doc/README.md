@@ -44,4 +44,4 @@ The `.ko` is selected by the `kernel_release` variant dimension (`when: { kernel
 A different kernel is a different `.ko`: adding a board means cross-building its module and adding a
 variant. A printer whose kernel matches no variant places no module (it fails closed rather than
 loading a mismatched `.ko`). A future OTA kernel bump is handled by the recover path re-selecting the
-variant for the new kernel; that autofixer is a later packet.
+variant for the new kernel; that autofixer is planned for a later release.

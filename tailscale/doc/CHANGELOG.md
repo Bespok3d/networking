@@ -36,5 +36,4 @@ own bounded readiness wait and cleanup handling worked correctly under this fail
 processes, the service ended in a clean `stopped` state, and Klipper/Moonraker were never
 interrupted. Uninstall (`tailscale` then `tun-module`) left the printer in its original clean
 state. Channel stays `experiment`: this is NOT a passing device-verify, it is a real, reproduced
-blocker on the kernel-tun path. See the project seed for the full diagnostic account and the
-handoff to further investigation.
+blocker on the kernel-tun path.

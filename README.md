@@ -22,7 +22,7 @@ networking/
 ```
 
 Each plugin declares WHAT (a destination `class` + a `service`/`kmodule` section), never a path or a
-raw command; the printer-side adapter realizes it. See `Bespok3d/doc/package-format.md`.
+raw command; the printer-side adapter realizes it.
 
 ## Building
 
