@@ -61,7 +61,7 @@ same ZeroTier address instead of generating a new one. If you want a clean ident
 `zerotier-one` here is the official ZeroTier binary extracted from their Debian arm64 package
 (SHA-pinned download, not compiled by this plugin); it is dynamically linked against glibc. The
 Snapmaker U1's own kernel and camera toolchain both target `aarch64-none-linux-gnu` (glibc, not
-musl), which is a good sign, but this plugin has **not yet been confirmed to run on a real printer**
+musl), which is a good sign, but **joining a ZeroTier network from the printer is not yet confirmed**
 (no static ZeroTier build exists upstream to sidestep this entirely). If the printer's glibc is
 older than the one this binary was built against, it will fail to start with a `GLIBC_x.xx not
 found` error, not silently misbehave. See the plugin's CHANGELOG for the device-verify status.

@@ -50,3 +50,65 @@ Action, which bakes and packs each plugin's `.b3` and cuts a release per plugin;
 action from `Bespok3d/main-index` then registers the atoms. This repo contributes atoms only and
 publishes no list of its own. Secrets: `MAIN_INDEX_TOKEN` (contents:write on main-index) and
 `REGISTRY_SIGNING_KEY` (the org registry key the `b3-builder` Action signs each `.b3` and atom with).
+
+## Composition
+
+Bespok3d's own code in this repository is under the repository licence below. The contents of
+[`vendor/`](vendor/) are separate works, each under its own licence, aggregated with Bespok3d's code
+on the same distribution medium. They are not under the repository licence and Bespok3d does not
+relicense them.
+
+None of the third-party payload is stored in this repository. Each plugin's `manifest.json` carries a
+bake directive that fetches or builds it at build time, so the third-party code enters only the built
+`.b3` package. `vendor/<component>/` carries that component's own licence text verbatim and a
+provenance note saying where it comes from, at which version, and how it is obtained.
+
+| Component | What it is | Licence | Provenance |
+| --- | --- | --- | --- |
+| ZeroTier One 1.16.2 | the `zerotier` plugin's service daemon | MPL-2.0 for the agent, ZeroTier SOURCE-AVAILABLE LICENSE Version 1.0 for the controller parts | [`vendor/zerotier-one/`](vendor/zerotier-one/) |
+| Tailscale 1.98.8 | the `tailscale` plugin's daemon and command | BSD-3-Clause | [`vendor/tailscale/`](vendor/tailscale/) |
+| Linux `tun` driver 6.1.99 | the module `tun-module` loads | GPL-2.0-only | [`vendor/linux-tun/`](vendor/linux-tun/) |
+
+ZeroTier's own notice states that its software is source-available and is not open source as defined
+by the Open Source Initiative, and that commercial use as its licence defines it requires a paid
+licence from ZeroTier, Inc. Anyone redistributing the built `zerotier` package is subject to that.
+
+### Corresponding Source
+
+The `tun-module` plugin ships `tun-6.1.99.ko`, the Linux `tun` driver, licensed GPL-2.0-only. Bespok3d
+builds that module rather than fetching it, so the source that corresponds to the shipped binary is
+upstream's source **plus** the configuration Bespok3d built it with:
+
+- upstream: `https://github.com/rockchip-linux/kernel.git` at commit
+  `8533b2249e1550b233a4836d039d64e3bb2fed7a`, kernel release 6.1.99
+- Bespok3d's build: [`tun-module/toolchain/`](tun-module/toolchain/) in this repository, which holds
+  the Dockerfile, the pinned cross toolchain and the kernel config the module is built against
+
+Both are public and are in every release of this repository. Anyone who received the binary may take
+that source and rebuild it. If any part of it is unreachable, ask the Bespok3d org and it will be
+provided. The full inventory of every binary Bespok3d ships, with versions and checksums, is in
+`Bespok3d_history/doc/gpl-source-inventory.md`.
+
+Tailscale and ZeroTier are shipped as their projects publish them, so the source corresponding to
+those binaries is upstream's own at the versions named above.
+
+## Licence
+
+Copyright (C) 2026 unlucio and the Bespok3d contributors
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU
+Affero General Public License as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero
+General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along with this program. If
+not, see <https://www.gnu.org/licenses/>. The full text is in [LICENSE](LICENSE).
+
+This licence covers Bespok3d's own code. It does not cover the separate works in `vendor/`, which
+keep their own licences as listed under Composition.
+
+Bespok3d is a project of the Bespok3d Organisation, which is not a legal entity. Copyright is held by
+the individual authors named above.
