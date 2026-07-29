@@ -1,5 +1,10 @@
 # networking
 
+[![licence](https://img.shields.io/badge/licence-AGPL--3.0-blue)](LICENSE)
+[![release](https://img.shields.io/github/v/release/Bespok3d/networking)](https://github.com/Bespok3d/networking/releases)
+![printer](https://img.shields.io/badge/printer-Snapmaker%20U1-informational)
+![stock firmware](https://img.shields.io/badge/stock%20firmware-no%20flashing-brightgreen)
+
 The Bespok3d networking co-repo: mesh-VPN plugins and the kernel base they build on.
 
 | Plugin | What it is |
