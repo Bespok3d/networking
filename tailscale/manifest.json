@@ -148,5 +148,7 @@
     ]
   },
   "conflict_resolutions": [],
-  "files": []
+  "files": [],
+  "license": "https://github.com/Bespok3d/networking/blob/dev/tailscale/doc/LICENSE",
+  "attributions": "# Attributions - tailscale\n\n**Plugin author:** Tailscale Inc., packaged by Bespok3d; the idea of a VPN on the U1 comes from the Extended Firmware overlay `66-app-vpn`, initial Tailscale support there by @mcristina422\n\nPuts the printer on a Tailscale network.\n\n| Upstream project | Author | Licence | Needed at runtime | Code ships in this package |\n| --- | --- | --- | --- | --- |\n| Tailscale client | Tailscale Inc. | BSD-3-Clause | yes | yes |\n\nThe official arm64 Tailscale build (currently 1.98.8) is downloaded from https://pkgs.tailscale.com\nat build time and shipped inside the package.\n\nThe binaries are Tailscale's own builds, shipped byte for byte as downloaded; nothing of\nTailscale's is stored in this repository. The licence text and the provenance note are in\n`vendor/tailscale/` at the root of this repository.\n\nPorted from the Extended Firmware overlay `66-app-vpn`, GPL-3.0, whose Tailscale work is credited to\n@mcristina422.\n"
 }
