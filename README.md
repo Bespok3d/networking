@@ -48,6 +48,9 @@ npx b3-builder build --source ./tun-module --atom-repo Bespok3d/networking --bak
 # -> dist/tun-module-<version>.b3 + dist/tun-module.atom.json
 ```
 
+Writing a plugin of your own? Start at the plugin documentation:
+[Bespok3d/b3-builder/doc](https://github.com/Bespok3d/b3-builder/tree/main/doc).
+
 ## Releasing
 
 Bump a plugin's `manifest.json` `version` and push the tag `plugin-<name>-v<version>` naming that
