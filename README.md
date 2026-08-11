@@ -50,11 +50,13 @@ npx b3-builder build --source ./tun-module --atom-repo Bespok3d/networking --bak
 
 ## Releasing
 
-Bump a plugin's `manifest.json` `version` and push to `main`. CI runs the `Bespok3d/b3-builder`
-Action, which bakes and packs each plugin's `.b3` and cuts a release per plugin; the `register-atoms`
-action from `Bespok3d/main-index` then registers the atoms. This repo contributes atoms only and
-publishes no list of its own. Secrets: `MAIN_INDEX_TOKEN` (contents:write on main-index) and
-`REGISTRY_SIGNING_KEY` (the org registry key the `b3-builder` Action signs each `.b3` and atom with).
+Bump a plugin's `manifest.json` `version` and push the tag `plugin-<name>-v<version>` naming that
+plugin and that exact number. A push to `main` publishes nothing, and the run is refused if the tag
+and the manifest disagree. CI runs the `Bespok3d/b3-builder` Action, which bakes and packs each
+plugin's `.b3` and cuts a release per plugin; the `register-atoms` action from `Bespok3d/main-index`
+then registers the atoms. This repo contributes atoms only and publishes no list of its own.
+Secrets: `MAIN_INDEX_TOKEN` (contents:write on main-index) and `REGISTRY_SIGNING_KEY` (the org
+registry key the `b3-builder` Action signs each `.b3` and atom with).
 
 ## Composition
 
