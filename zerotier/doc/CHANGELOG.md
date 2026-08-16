@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 (2026-08-16)
+
+ZeroTier is now a stable plugin. Before, it only showed up in the store if you had set your plugin
+channel to testing; now it shows for everyone. Nothing about the plugin itself changed.
+
 ## 0.1.1 (2026-07-05)
 
 You can now change the ZeroTier network from the Config tab without reinstalling. The network id is
@@ -11,8 +16,6 @@ printer for the new network in ZeroTier Central.
 Docs: added a note on reaching Moonraker over ZeroTier. The default managed-route pool already falls
 inside Moonraker's stock trusted list, so Fluidd loads without a login prompt out of the box; a
 custom range outside those blocks needs a manual `trusted_clients` addition (documented).
-
-Re-verification of THIS release on junior is pending (AWAITING-LUCIO).
 
 ## 0.1.0 (2026-07-05)
 
