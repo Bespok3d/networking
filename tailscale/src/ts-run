@@ -33,6 +33,9 @@ AUTHKEY_FILE="$2"
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 STATE_FILE="$DATA_DIR/tailscaled.state"
 SOCKET_FILE="$DATA_DIR/tailscaled.sock"
+# Written after a `tailscale up` that succeeds: from then on the state file holds this printer's
+# login, which is what lets a later start survive a join that times out (see the join below).
+JOINED_MARKER="$DATA_DIR/joined"
 
 if [ ! -f "$AUTHKEY_FILE" ]; then
   echo "ts-run: auth key file not found: $AUTHKEY_FILE (is the plugin configured?)" >&2
@@ -88,6 +91,22 @@ done
 
 # --timeout bounds the join attempt (a real tailscale up flag, cmd/tailscale/cli/up.go) so an
 # unreachable control server fails the service start instead of hanging it indefinitely.
-"$BIN_DIR/tailscale" --socket="$SOCKET_FILE" up --auth-key="$AUTHKEY" --accept-dns=false --hostname=bespok3d-printer --timeout=15s
+#
+# A printer that has joined before is the exception. The service starts at boot, often before the
+# Wi-Fi has associated, so this join can time out on a printer that is otherwise fine; tearing
+# tailscaled down then left the printer off the tailnet until someone restarted the service by hand,
+# because the service supervisor does not respawn it. The timeout only ends the CLI's wait, not the
+# backend's attempt (up.go: "maximum amount of time to wait for tailscaled to enter a Running
+# state"), and tailscaled keeps the saved login in its state file, so it connects on its own once the
+# network is up: for that printer a failed join is logged and the wrapper keeps tracking tailscaled.
+# A first join that fails is still fatal, as before: there is no saved login to reconnect with.
+if "$BIN_DIR/tailscale" --socket="$SOCKET_FILE" up --auth-key="$AUTHKEY" --accept-dns=false --hostname=bespok3d-printer --timeout=15s; then
+  : > "$JOINED_MARKER"
+elif [ -f "$JOINED_MARKER" ]; then
+  echo "ts-run: tailscale up did not finish (no network yet?); keeping tailscaled, which reconnects with its saved login" >&2
+else
+  echo "ts-run: tailscale up failed on the first join" >&2
+  exit 1
+fi
 
 wait "$TAILSCALED_PID"
