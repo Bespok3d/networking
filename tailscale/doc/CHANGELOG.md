@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.3 (2026-10-27)
+
+Tailscale now comes back after a reboot even when the Wi-Fi is slow to connect. The service starts
+at boot, often before the printer has associated, and `tailscale up` could not reach the control
+server within its 15 seconds; `ts-run` then stopped `tailscaled` and nothing started it again, so the
+printer stayed off the tailnet until the service was restarted by hand. A printer that has joined
+before now keeps `tailscaled` running when that join times out: it holds the saved login and
+connects on its own once the network is up. A first join that fails still stops the service, as
+before.
+
 ## 0.1.2 (2026-08-16)
 
 Tailscale is now a stable plugin. Before, it only showed up in the store if you had set your
