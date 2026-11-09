@@ -38,7 +38,9 @@ traffic.
 - `ts-run`, a small wrapper this plugin ships: it starts `tailscaled`, waits for its control
   socket, then runs `tailscale up --auth-key=...` once to join, then tracks `tailscaled` so the
   printer's service supervisor can stop it cleanly (and clean up its netfilter state on stop, the
-  same step `tailscaled`'s own systemd unit runs via `ExecStopPost`).
+  same step `tailscaled`'s own systemd unit runs via `ExecStopPost`). If the join times out on a
+  printer that has joined before (at boot, say, before the Wi-Fi connects), `ts-run` keeps
+  `tailscaled` running: it reconnects with its saved login once the network is up.
 - Requires the `tun-module` plugin (installed automatically): Tailscale runs over a real
   `/dev/net/tun`-backed interface here rather than its userspace-networking fallback, which is
   lighter on the printer and consistent with how the ZeroTier plugin uses the same base.

@@ -94,6 +94,7 @@ grep -q -- "--socket=$HOME_DIR/tailscaled.sock" "$WORK/tailscale-invoked" \
 grep -q -- "--auth-key=tskey-auth-testonly-000000000000" "$WORK/tailscale-invoked" \
   || fail "tailscale up was not called with the key read from its rendered file"
 [ -f "$WORK/tailscaled-pid" ] || fail "tailscaled was never started"
+[ -f "$HOME_DIR/joined" ] || fail "a successful join did not record that this printer has joined"
 
 kill -TERM "$RUN_PID"
 wait "$RUN_PID" 2>/dev/null || true
@@ -114,8 +115,9 @@ grep -q -- "--auth-key=tskey-auth-rotated-111111111111" "$WORK/tailscale-invoked
 kill -TERM "$RUN_PID"
 wait "$RUN_PID" 2>/dev/null || true
 
-# 4. A rejected join (tailscale up exits nonzero): under `set -e` this must still run cleanup, not
-# leave tailscaled orphaned. This is the failure mode a real expired/revoked auth key produces.
+# 4. A rejected first join (tailscale up exits nonzero on a printer that never joined): under
+# `set -e` this must still run cleanup, not leave tailscaled orphaned. This is the failure mode a real
+# expired/revoked auth key produces.
 rm -f "$WORK/tailscale-invoked" "$WORK/cleanup-invoked" "$WORK/tailscaled-pid"
 : > "$WORK/tailscale-should-fail"
 REJECT_HOME="$WORK/home-reject"
@@ -127,6 +129,25 @@ fi
 [ -f "$WORK/cleanup-invoked" ] || fail "a rejected join must still run tailscaled --cleanup"
 [ -f "$WORK/tailscaled-pid" ] && kill -0 "$(cat "$WORK/tailscaled-pid")" 2>/dev/null \
   && fail "tailscaled was left running after a rejected join"
+rm -f "$WORK/tailscale-should-fail"
+
+# 4b. A printer that joined before (HOME_DIR, from test 3) starts with no network yet, the usual case
+# at boot before the Wi-Fi associates: tailscale up fails, but tailscaled holds the saved login and
+# reconnects on its own, so ts-run must keep it running instead of tearing it down. A later stop
+# still runs cleanup.
+rm -f "$WORK/tailscale-invoked" "$WORK/cleanup-invoked" "$WORK/tailscaled-pid"
+: > "$WORK/tailscale-should-fail"
+"$WORK/ts-run" "$HOME_DIR" "$KEY_FILE" 2>/dev/null &
+RUN_PID=$!
+wait_for "$WORK/tailscale-invoked"
+sleep 1
+kill -0 "$RUN_PID" 2>/dev/null || fail "ts-run exited on a failed join although this printer had joined before"
+kill -0 "$(cat "$WORK/tailscaled-pid")" 2>/dev/null \
+  || fail "tailscaled was torn down on a failed join although this printer had joined before"
+[ -f "$WORK/cleanup-invoked" ] && fail "cleanup ran on a failed join although this printer had joined before"
+kill -TERM "$RUN_PID"
+wait "$RUN_PID" 2>/dev/null || true
+[ -f "$WORK/cleanup-invoked" ] || fail "tailscaled --cleanup was not invoked on stop after an offline start"
 rm -f "$WORK/tailscale-should-fail"
 
 # 5. tailscaled crashing on its own after a successful join (not stopped by us) must still run
