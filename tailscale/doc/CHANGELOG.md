@@ -2,13 +2,10 @@
 
 ## 0.1.3 (2026-10-27)
 
-Tailscale now comes back after a reboot even when the Wi-Fi is slow to connect. The service starts
-at boot, often before the printer has associated, and `tailscale up` could not reach the control
-server within its 15 seconds; `ts-run` then stopped `tailscaled` and nothing started it again, so the
-printer stayed off the tailnet until the service was restarted by hand. A printer that has joined
-before now keeps `tailscaled` running when that join times out: it holds the saved login and
-connects on its own once the network is up. A first join that fails still stops the service, as
-before.
+Tailscale now comes back after a reboot even when the Wi-Fi is slow to connect. Before, the printer
+could stay off your tailnet until you restarted Tailscale by hand. A printer that has joined before
+now waits and connects on its own once the network is up. If the very first join fails, Tailscale
+still stops, as before. Thanks to olavgm.
 
 ## 0.1.2 (2026-08-16)
 
